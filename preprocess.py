@@ -14,7 +14,28 @@ class HanziDataset(Dataset):
         self.svg_dir = Path(svg_dir)
         self.transform = transform
         self.max_seq_len = max_seq_len
+        
+        # 檢查目錄是否存在
+        if not self.img_dir.exists():
+            raise FileNotFoundError(f"圖像目錄不存在: {img_dir}")
+        if not self.svg_dir.exists():
+            raise FileNotFoundError(f"SVG目錄不存在: {svg_dir}")
+            
+        # 獲取所有PNG文件
         self.img_files = sorted([f for f in os.listdir(img_dir) if f.endswith('.png')])
+        print(f"找到 {len(self.img_files)} 個PNG文件")
+        
+        # 檢查對應的SVG文件是否存在
+        valid_files = []
+        for img_file in self.img_files:
+            svg_file = img_file.replace('.png', '.svg')
+            if (self.svg_dir / svg_file).exists():
+                valid_files.append(img_file)
+            else:
+                print(f"警告: 找不到對應的SVG文件: {svg_file}")
+        
+        self.img_files = valid_files
+        print(f"有效的文件對數量: {len(self.img_files)}")
         
         # 構建詞彙表
         self.vocab = self._build_vocab()
@@ -39,12 +60,22 @@ class HanziDataset(Dataset):
         return {token: idx for idx, token in enumerate(vocab)}
     
     def _extract_path_from_svg(self, svg_path):
-        tree = ET.parse(svg_path)
-        root = tree.getroot()
-        path = root.find('.//{http://www.w3.org/2000/svg}path')
-        return path.get('d') if path is not None else ''
+        try:
+            tree = ET.parse(svg_path)
+            root = tree.getroot()
+            path = root.find('.//{http://www.w3.org/2000/svg}path')
+            if path is None:
+                print(f"警告: 在 {svg_path} 中找不到path元素")
+                return ''
+            return path.get('d') if path is not None else ''
+        except Exception as e:
+            print(f"錯誤: 解析SVG文件 {svg_path} 時出錯: {str(e)}")
+            return ''
     
     def _parse_path_commands(self, path_string):
+        if not path_string:
+            return []
+            
         # 使用正則表達式匹配命令和坐標
         pattern = r'([A-Z])\s*([-\d\s.]*)'
         matches = re.findall(pattern, path_string)
@@ -60,6 +91,8 @@ class HanziDataset(Dataset):
                 coords = coords.strip().split()
                 if len(coords) >= 2:
                     tokens.extend([str(int(float(coords[0]))), str(int(float(coords[1])))])
+                else:
+                    print(f"警告: {cmd} 命令缺少坐標")
             elif cmd == 'Q':
                 # Q後面跟四個坐標
                 coords = coords.strip().split()
@@ -70,6 +103,8 @@ class HanziDataset(Dataset):
                         str(int(float(coords[2]))),  # 終點x
                         str(int(float(coords[3])))   # 終點y
                     ])
+                else:
+                    print(f"警告: Q 命令缺少坐標")
             # Z命令不需要坐標
         
         return tokens
@@ -87,6 +122,7 @@ class HanziDataset(Dataset):
         
         # 確保序列長度不超過max_seq_len
         if len(tokens) > self.max_seq_len:
+            print(f"警告: 序列長度 {len(tokens)} 超過最大長度 {self.max_seq_len}")
             tokens = tokens[:self.max_seq_len-1] + [self.vocab['<eos>']]
         
         # 填充序列到固定長度
@@ -99,33 +135,40 @@ class HanziDataset(Dataset):
         return len(self.img_files)
     
     def __getitem__(self, idx):
-        img_name = self.img_files[idx]
-        img_path = self.img_dir / img_name
-        svg_path = self.svg_dir / img_name.replace('.png', '.svg')
-        
-        # 讀取並處理圖像
-        img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
-        img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)[1]
-        img = img.astype(np.float32) / 255.0
-        img = torch.from_numpy(img).unsqueeze(0)  # 1*H*W
-        
-        # 讀取並處理SVG
-        path_string = self._extract_path_from_svg(svg_path)
-        tokens = self._path_to_tokens(path_string)
-        
-        # 打印一些調試信息
-        if idx < 3:  # 只打印前3個樣本的信息
-            print(f"\n樣本 {idx}:")
-            print(f"圖像文件: {img_name}")
-            print(f"SVG文件: {img_name.replace('.png', '.svg')}")
-            print(f"原始path: {path_string}")
-            print(f"Token序列長度: {len(tokens)}")
-        
-        return {
-            'image': img,
-            'tokens': torch.tensor(tokens),
-            'path_string': path_string
-        }
+        try:
+            img_name = self.img_files[idx]
+            img_path = self.img_dir / img_name
+            svg_path = self.svg_dir / img_name.replace('.png', '.svg')
+            
+            # 讀取並處理圖像
+            img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+            if img is None:
+                raise ValueError(f"無法讀取圖像: {img_path}")
+                
+            img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)[1]
+            img = img.astype(np.float32) / 255.0
+            img = torch.from_numpy(img).unsqueeze(0)  # 1*H*W
+            
+            # 讀取並處理SVG
+            path_string = self._extract_path_from_svg(svg_path)
+            tokens = self._path_to_tokens(path_string)
+            
+            # 打印一些調試信息
+            if idx < 3:  # 只打印前3個樣本的信息
+                print(f"\n樣本 {idx}:")
+                print(f"圖像文件: {img_name}")
+                print(f"SVG文件: {img_name.replace('.png', '.svg')}")
+                print(f"原始path: {path_string}")
+                print(f"Token序列長度: {len(tokens)}")
+            
+            return {
+                'image': img,
+                'tokens': torch.tensor(tokens),
+                'path_string': path_string
+            }
+        except Exception as e:
+            print(f"錯誤: 處理樣本 {idx} 時出錯: {str(e)}")
+            raise
 
 def create_dataloaders(img_dir, svg_dir, batch_size=32, max_seq_len=100):
     dataset = HanziDataset(img_dir, svg_dir, max_seq_len=max_seq_len)
@@ -140,16 +183,6 @@ if __name__ == '__main__':
         max_seq_len=100
     )
     
-    # tiaoshi 
-    #dataset = HanziDataset(img_dir='dataset/imgs_train', svg_dir='dataset/svgs_train')
-    #svg_path = 'dataset/svgs_train/200021.svg'
-    #path_str = dataset._extract_path_from_svg(svg_path)
-    #print("原始 path 字符串：", path_str)
-    #tokens = dataset._parse_path_commands(path_str)
-    #print("Token 字符串序列：", tokens)
-    #token_ids = dataset._path_to_tokens(path_str)
-    #print("Token ID 序列：", token_ids)
-
     # 打印詞彙表大小
     print(f"詞彙表大小: {len(vocab)}")
     

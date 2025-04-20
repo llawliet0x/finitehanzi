@@ -68,6 +68,29 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:, :x.size(0)]
         return x
 
+class TransformerDecoder(nn.Module):
+    def __init__(self, vocab_size, d_model, nhead, num_layers, dim_feedforward, max_seq_length, dropout=0.1):
+        super(TransformerDecoder, self).__init__()
+        self.d_model = d_model
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.pos_encoder = PositionalEncoding(d_model, dropout, max_seq_length)
+        decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout)
+        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers)
+        self.fc = nn.Linear(d_model, vocab_size)
+        
+    def forward(self, tgt, memory, tgt_mask=None, tgt_key_padding_mask=None):
+        tgt = self.embedding(tgt) * math.sqrt(self.d_model)
+        tgt = self.pos_encoder(tgt)
+        output = self.transformer_decoder(tgt, memory, tgt_mask=tgt_mask, tgt_key_padding_mask=tgt_key_padding_mask)
+        output = self.fc(output)
+        return output
+        
+    def generate_square_subsequent_mask(self, sz):
+        """生成一个上三角矩阵，用于防止解码器看到未来的信息"""
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
 class HanziModel(nn.Module):
     def __init__(self, vocab_size):
         super().__init__()
