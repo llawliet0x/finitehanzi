@@ -1,4 +1,8 @@
-(finite) hh@hh-HYM-WXX:~/Downloads/finitehanzi$ python train.py
+\(finite) hh@hh-HYM-WXX:~/Downloads/finitehanzi$ python train.py
+數據集大小: 4244
+詞彙表大小: 1032
+數據集大小: 461
+詞彙表大小: 1032
 Epoch 1/50
 Training:   0%|                                         | 0/133 [00:00<?, ?it/s]
 Traceback (most recent call last):
@@ -9,4 +13,5 @@ Traceback (most recent call last):
   File "train.py", line 20, in train_epoch
     tgt_mask = model.decoder.transformer_decoder.generate_square_subsequent_mask(tokens.size(0)).to(device)
   File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1186, in __getattr__
-    type(self).__
+    type(self).__name__, name))
+AttributeError: 'TransformerDecoder' object has no attribute 'generate_square_subsequent_mask'
