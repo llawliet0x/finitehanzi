@@ -20,6 +20,10 @@ class HanziDataset(Dataset):
         self.vocab = self._build_vocab()
         self.vocab_size = len(self.vocab)
         
+        # 打印數據集信息
+        print(f"數據集大小: {len(self.img_files)}")
+        print(f"詞彙表大小: {self.vocab_size}")
+        
     def _build_vocab(self):
         # 特殊token
         special_tokens = ['<pad>', '<sos>', '<eos>']
@@ -81,12 +85,13 @@ class HanziDataset(Dataset):
         
         tokens.append(self.vocab['<eos>'])
         
+        # 確保序列長度不超過max_seq_len
+        if len(tokens) > self.max_seq_len:
+            tokens = tokens[:self.max_seq_len-1] + [self.vocab['<eos>']]
+        
         # 填充序列到固定長度
         if len(tokens) < self.max_seq_len:
             tokens.extend([self.vocab['<pad>']] * (self.max_seq_len - len(tokens)))
-        else:
-            tokens = tokens[:self.max_seq_len]
-            tokens[-1] = self.vocab['<eos>']
             
         return tokens
     
@@ -107,6 +112,14 @@ class HanziDataset(Dataset):
         # 讀取並處理SVG
         path_string = self._extract_path_from_svg(svg_path)
         tokens = self._path_to_tokens(path_string)
+        
+        # 打印一些調試信息
+        if idx < 3:  # 只打印前3個樣本的信息
+            print(f"\n樣本 {idx}:")
+            print(f"圖像文件: {img_name}")
+            print(f"SVG文件: {img_name.replace('.png', '.svg')}")
+            print(f"原始path: {path_string}")
+            print(f"Token序列長度: {len(tokens)}")
         
         return {
             'image': img,
