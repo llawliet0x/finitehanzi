@@ -127,6 +127,16 @@ if __name__ == '__main__':
         max_seq_len=100
     )
     
+    # tiaoshi 
+    #dataset = HanziDataset(img_dir='dataset/imgs_train', svg_dir='dataset/svgs_train')
+    #svg_path = 'dataset/svgs_train/200021.svg'
+    #path_str = dataset._extract_path_from_svg(svg_path)
+    #print("原始 path 字符串：", path_str)
+    #tokens = dataset._parse_path_commands(path_str)
+    #print("Token 字符串序列：", tokens)
+    #token_ids = dataset._path_to_tokens(path_str)
+    #print("Token ID 序列：", token_ids)
+
     # 打印詞彙表大小
     print(f"詞彙表大小: {len(vocab)}")
     

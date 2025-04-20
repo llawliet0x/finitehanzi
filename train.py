@@ -6,6 +6,7 @@ from preprocess import HanziDataset, create_dataloaders
 from model import HanziModel
 import os
 from tqdm import tqdm
+import math
 
 def train_epoch(model, train_loader, criterion, optimizer, device):
     model.train()
@@ -76,7 +77,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     
     # 訓練參數
-    num_epochs = 100
+    num_epochs = 50
     best_val_loss = float('inf')
     
     # 創建保存目錄

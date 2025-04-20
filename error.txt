@@ -1,18 +1,12 @@
-(finite) hh@hh-HYM-WXX:~/Downloads/finitehanzi$ python preprocess.py
-詞彙表大小: 53473
+(finite) hh@hh-HYM-WXX:~/Downloads/finitehanzi$ python train.py
+Epoch 1/50
+Training:   0%|                                         | 0/133 [00:00<?, ?it/s]
 Traceback (most recent call last):
-  File "preprocess.py", line 105, in <module>
-    batch = next(iter(train_loader))
-  File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 530, in __next__
-    data = self._next_data()
-  File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 570, in _next_data
-    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
-  File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    return self.collate_fn(data)
-  File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/utils/data/_utils/collate.py", line 157, in default_collate
-    return elem_type({key: default_collate([d[key] for d in batch]) for key in elem})
-  File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/utils/data/_utils/collate.py", line 157, in <dictcomp>
-    return elem_type({key: default_collate([d[key] for d in batch]) for key in elem})
-  File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/utils/data/_utils/collate.py", line 138, in default_collate
-    return torch.stack(batch, 0, out=out)
-RuntimeError: stack expects each tensor to be equal size, but got [13] at entry 0 and [14] at entry 1
+  File "train.py", line 122, in <module>
+    main() 
+  File "train.py", line 91, in main
+    train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
+  File "train.py", line 20, in train_epoch
+    tgt_mask = model.decoder.transformer_decoder.generate_square_subsequent_mask(tokens.size(0)).to(device)
+  File "/home/hh/miniconda3/envs/finite/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1186, in __getattr__
+    type(self).__
