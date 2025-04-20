@@ -21,16 +21,17 @@ class HanziDataset(Dataset):
         self.vocab_size = len(self.vocab)
         
     def _build_vocab(self):
-        # 基本命令詞彙
-        commands = ['M', 'L', 'Q', 'Z']
+        # 特殊token
+        special_tokens = ['<pad>', '<sos>', '<eos>']
         
-        # 創建詞彙表
-        vocab = ['<pad>', '<sos>', '<eos>'] + commands
+        # 命令token
+        command_tokens = ['M', 'Q', 'L', 'Z']
         
-        # 添加坐標值到詞彙表
-        for i in range(1025):  # 0-1024
-            vocab.append(str(i))
-            
+        # 坐標token (0-1024)
+        coord_tokens = [str(i) for i in range(1025)]
+        
+        # 組合詞彙表
+        vocab = special_tokens + command_tokens + coord_tokens
         return {token: idx for idx, token in enumerate(vocab)}
     
     def _extract_path_from_svg(self, svg_path):
@@ -40,8 +41,8 @@ class HanziDataset(Dataset):
         return path.get('d') if path is not None else ''
     
     def _parse_path_commands(self, path_string):
-        # 使用正則表達式分割命令和坐標
-        pattern = r'([A-Za-z])\s*([-\d\s.]*)'
+        # 使用正則表達式匹配命令和坐標
+        pattern = r'([A-Z])\s*([-\d\s.]*)'
         matches = re.findall(pattern, path_string)
         
         tokens = []
@@ -49,13 +50,23 @@ class HanziDataset(Dataset):
             # 添加命令token
             tokens.append(cmd)
             
-            # 處理坐標
-            if coords.strip():
-                coord_list = coords.strip().split()
-                for coord in coord_list:
-                    # 將坐標值轉換為整數並添加到token中
-                    coord_int = int(float(coord))
-                    tokens.append(str(coord_int))
+            # 根據不同命令處理坐標
+            if cmd == 'M' or cmd == 'L':
+                # M和L後面跟兩個坐標
+                coords = coords.strip().split()
+                if len(coords) >= 2:
+                    tokens.extend([str(int(float(coords[0]))), str(int(float(coords[1])))])
+            elif cmd == 'Q':
+                # Q後面跟四個坐標
+                coords = coords.strip().split()
+                if len(coords) >= 4:
+                    tokens.extend([
+                        str(int(float(coords[0]))),  # 控制點x
+                        str(int(float(coords[1]))),  # 控制點y
+                        str(int(float(coords[2]))),  # 終點x
+                        str(int(float(coords[3])))   # 終點y
+                    ])
+            # Z命令不需要坐標
         
         return tokens
     
