@@ -25,7 +25,7 @@ class Decoder(nn.Module):
         self.d_model = d_model
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.pos_encoder = PositionalEncoding(d_model)
-        
+
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=d_model,
             nhead=nhead,
@@ -33,24 +33,25 @@ class Decoder(nn.Module):
             dropout=0.1
         )
         self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
-        
         self.fc = nn.Linear(d_model, vocab_size)
-        
+
     def forward(self, memory, tgt, tgt_mask=None, tgt_key_padding_mask=None):
-        # memory: (H*W, B, d_model)
-        # tgt: (T, B)
         tgt = self.embedding(tgt) * torch.sqrt(torch.tensor(self.d_model, dtype=torch.float))
         tgt = self.pos_encoder(tgt)
-        
         output = self.transformer_decoder(
             tgt=tgt,
             memory=memory,
             tgt_mask=tgt_mask,
             tgt_key_padding_mask=tgt_key_padding_mask
         )
-        
         output = self.fc(output)
         return output
+
+    def generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):

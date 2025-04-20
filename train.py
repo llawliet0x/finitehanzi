@@ -14,16 +14,14 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
     
     for batch in tqdm(train_loader, desc='Training'):
         images = batch['image'].to(device)
-        tokens = batch['tokens'].to(device)
-        
-        # 創建目標掩碼
-        tgt_mask = model.decoder.transformer_decoder.generate_square_subsequent_mask(tokens.size(0)).to(device)
-        
-        # 前向傳播
-        output = model(images, tokens[:-1], tgt_mask=tgt_mask)
-        
-        # 計算損失
-        loss = criterion(output.view(-1, output.size(-1)), tokens[1:].view(-1))
+        tokens = batch['tokens'].to(device)  # [B, T]
+        tokens = tokens.transpose(0, 1)      # [T, B]
+
+        tgt_mask = model.decoder.generate_square_subsequent_mask(tokens.size(0)).to(device)
+
+        output = model(images, tokens[:-1], tgt_mask=tgt_mask)  # input: <sos> ... token_{n-1}
+        loss = criterion(output.view(-1, output.size(-1)), tokens[1:].reshape(-1))  # target: token_1 ... <eos>
+
         
         # 反向傳播
         optimizer.zero_grad()
@@ -43,8 +41,8 @@ def validate(model, val_loader, criterion, device):
             images = batch['image'].to(device)
             tokens = batch['tokens'].to(device)
             
-            tgt_mask = model.decoder.transformer_decoder.generate_square_subsequent_mask(tokens.size(0)).to(device)
-            
+            tgt_mask = model.decoder.generate_square_subsequent_mask(tokens.size(1)).to(device)
+
             output = model(images, tokens[:-1], tgt_mask=tgt_mask)
             loss = criterion(output.view(-1, output.size(-1)), tokens[1:].view(-1))
             

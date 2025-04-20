@@ -9,7 +9,7 @@ from torchvision import transforms
 import re
 
 class HanziDataset(Dataset):
-    def __init__(self, img_dir, svg_dir, transform=None, max_seq_len=100):
+    def __init__(self, img_dir, svg_dir, transform=None, max_seq_len=200):
         self.img_dir = Path(img_dir)
         self.svg_dir = Path(svg_dir)
         self.transform = transform
@@ -170,7 +170,7 @@ class HanziDataset(Dataset):
             print(f"錯誤: 處理樣本 {idx} 時出錯: {str(e)}")
             raise
 
-def create_dataloaders(img_dir, svg_dir, batch_size=32, max_seq_len=100):
+def create_dataloaders(img_dir, svg_dir, batch_size=32, max_seq_len=200):
     dataset = HanziDataset(img_dir, svg_dir, max_seq_len=max_seq_len)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     return dataloader, dataset.vocab
